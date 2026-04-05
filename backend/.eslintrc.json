@@ -1,0 +1,19 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "commonjs"
+  },
+  "rules": {
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-console": "warn",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_|next" }],
+    "eqeqeq": ["error", "always"],
+    "no-eval": "error",
+    "no-implied-eval": "error"
+  }
+}
