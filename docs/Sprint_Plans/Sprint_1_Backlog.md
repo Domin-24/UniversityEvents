@@ -1,142 +1,246 @@
-# Sprint 2 Backlog — ระบบจัดการกิจกรรมมหาวิทยาลัย
+# Sprint 1 Backlog — ระบบจัดการกิจกรรมมหาวิทยาลัย
 
-**Sprint Duration:** ช่วงท้ายโครงการ
-**Sprint Goal:** ปิดงานค้างหลักของระบบและเตรียมความพร้อมส่งงานรอบสุดท้าย ได้แก่แก้ไขกิจกรรม, เช็กชื่อหน้างาน, ประวัติการเข้าร่วม, แบบประเมิน, และค้นหา/กรองกิจกรรม
+**Sprint Duration:** สัปดาห์ที่ 1–2 (2 สัปดาห์)  
+**Sprint Goal:** ระบบสามารถ register/login, สร้างกิจกรรม, อนุมัติ, และสมัครเข้าร่วมกิจกรรมได้ครบ flow
 
 ---
 
-## User Stories (Planned)
+## User Stories
 
-### US-04 — แก้ไขกิจกรรม (Edit Event)
-**As an** ผู้จัดกิจกรรม  
-**I want to** แก้ไขรายละเอียดกิจกรรมของตัวเอง  
-**So that** ข้อมูลกิจกรรมเป็นปัจจุบันและถูกต้อง
+---
 
-**Story Points:** 5  
-**Assigned:** Backend + Frontend  
-**Status:** ⏳ Planned  
-**Dependencies:** US-04 (create event) from previous sprint
+### US-01 — ลงทะเบียนผู้ใช้ใหม่
+**As a** นิสิตหรืออาจารย์  
+**I want to** สร้างบัญชีใหม่ด้วยชื่อ, อีเมล, รหัสผ่าน และ role  
+**So that** ฉันสามารถเข้าใช้ระบบได้
+
+**Story Points:** 3  
+**Assigned:** นักพัฒนา Backend  
+**Status:** ✅ Done  
+**Dependencies:** ไม่มี
 
 **Tasks:**
-| # | Task | Estimate |
-|---|------|----------|
-| T4.1 | เพิ่ม `PATCH /api/events/:eventId` endpoint | 2h |
-| T4.2 | เพิ่ม Zod schema สำหรับการแก้ไขข้อมูล | 1h |
-| T4.3 | ตรวจสิทธิ์ให้แก้ได้เฉพาะเจ้าของกิจกรรมหรือ ADMIN | 1h |
-| T4.4 | UI หน้าแก้ไขกิจกรรม + prefill ข้อมูลเดิม | 2h |
-| T4.5 | เพิ่ม unit/integration tests สำหรับ edit flow | 2h |
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T1.1 | สร้าง POST /api/auth/register endpoint | 2h |
+| T1.2 | เพิ่ม Zod validation (email, password min 8) | 1h |
+| T1.3 | Hash password ด้วย bcrypt | 1h |
+| T1.4 | ป้องกัน email ซ้ำ (409 Conflict) | 0.5h |
+| T1.5 | Return JWT token หลัง register สำเร็จ | 0.5h |
 
 ---
 
-### US-08 — เช็กชื่อเข้าร่วมกิจกรรม (Check-in Attendance)
-**As an** ผู้จัดกิจกรรม  
-**I want to** เช็กชื่อผู้เข้าร่วมในวันงาน  
-**So that** ระบบบันทึกสถานะเข้าร่วมและเวลาเช็กชื่อได้ถูกต้อง
+### US-02 — เข้าสู่ระบบ
+**As a** ผู้ใช้ที่ลงทะเบียนแล้ว  
+**I want to** login ด้วยอีเมลและรหัสผ่าน  
+**So that** ฉันได้รับ JWT token สำหรับใช้งานระบบ
+
+**Story Points:** 2  
+**Assigned:** นักพัฒนา Backend  
+**Status:** ✅ Done  
+**Dependencies:** US-01
+
+**Tasks:**
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T2.1 | สร้าง POST /api/auth/login endpoint | 1h |
+| T2.2 | ตรวจ email/password ด้วย bcrypt compare | 1h |
+| T2.3 | Return JWT + user info เมื่อ login สำเร็จ | 0.5h |
+| T2.4 | Handle invalid credentials (401) | 0.5h |
+
+---
+
+### US-03 — หน้า Login / Register UI
+**As a** ผู้ใช้ใหม่  
+**I want to** เห็นฟอร์ม login และ register ที่ใช้งานง่าย  
+**So that** ฉันสามารถเข้าสู่ระบบผ่านเว็บเบราว์เซอร์ได้
+
+**Story Points:** 3  
+**Assigned:** นักพัฒนา Frontend  
+**Status:** ✅ Done  
+**Dependencies:** US-01, US-02
+
+**Tasks:**
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T3.1 | สร้าง LoginPage component พร้อม form | 2h |
+| T3.2 | สร้าง RegisterPage component พร้อม role selector | 2h |
+| T3.3 | ทำ AuthContext (JWT, user state) | 1.5h |
+| T3.4 | Protected route redirect ถ้าไม่ได้ login | 1h |
+| T3.5 | Redirect ไป dashboard หลัง login/register | 0.5h |
+
+---
+
+### US-04 — สร้างกิจกรรม (อาจารย์/แอดมิน)
+**As an** อาจารย์หรือแอดมิน  
+**I want to** สร้างกิจกรรมใหม่โดยกำหนดชื่อ, คำอธิบาย, วันที่, สถานที่, จำนวนที่นั่ง  
+**So that** นิสิตสามารถเห็นและสมัครเข้าร่วมได้
+
+**Story Points:** 5  
+**Assigned:** นักพัฒนา Backend  
+**Status:** 🟡 Partial  
+**Dependencies:** US-01, US-02
+
+**Tasks:**
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T4.1 | สร้าง POST /api/events endpoint | 2h |
+| T4.2 | Validate input ด้วย Zod schema | 1h |
+| T4.3 | เก็บ event ใน DB ด้วย status PENDING | 1h |
+| T4.4 | Guard route ด้วย requireRole(['LECTURER','ADMIN']) | 0.5h |
+| T4.5 | Normalize ISO date เป็น MySQL DATETIME format | 0.5h |
+
+---
+
+### US-05 — อนุมัติ/ปฏิเสธกิจกรรม
+**As an** อาจารย์หรือแอดมิน  
+**I want to** ดูรายการกิจกรรมที่รอการอนุมัติ และอนุมัติหรือปฏิเสธพร้อม remark  
+**So that** กิจกรรมที่ผ่านการตรวจสอบแล้วเท่านั้นที่นิสิตจะเห็น
+
+**Story Points:** 5  
+**Assigned:** นักพัฒนา Backend  
+**Status:** ✅ Done  
+**Dependencies:** US-04
+
+**Tasks:**
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T5.1 | GET /api/approvals/pending — รายการรอ approve | 1.5h |
+| T5.2 | PATCH /api/approvals/:eventId — approve/reject | 2h |
+| T5.3 | บันทึกประวัติใน approvals table | 1h |
+| T5.4 | Guard route สำหรับ LECTURER/ADMIN เท่านั้น | 0.5h |
+
+---
+
+### US-06 — ดูรายการกิจกรรม (นิสิต)
+**As a** นิสิต  
+**I want to** เห็นรายการกิจกรรมที่ได้รับการอนุมัติแล้ว พร้อมข้อมูลที่นั่งว่าง  
+**So that** ฉันสามารถตัดสินใจสมัครเข้าร่วมได้
+
+**Story Points:** 3  
+**Assigned:** นักพัฒนา Backend + Frontend  
+**Status:** ✅ Done  
+**Dependencies:** US-05
+
+**Tasks:**
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T6.1 | GET /api/events — รายการ approved events | 1h |
+| T6.2 | JOIN registrations เพื่อคำนวณ registeredCount | 1.5h |
+| T6.3 | แสดง remainingSlots ใน response | 0.5h |
+| T6.4 | Frontend: แสดง event cards ใน Dashboard | 2h |
+
+---
+
+### US-07 — สมัครเข้าร่วมกิจกรรม (นิสิต)
+**As a** นิสิต  
+**I want to** กดสมัครเข้าร่วมกิจกรรมที่เปิดรับสมัคร  
+**So that** ฉันมีสิทธิ์เข้าร่วมกิจกรรมนั้น และระบบบันทึกการลงทะเบียนของฉัน
 
 **Story Points:** 8  
-**Assigned:** Backend + Frontend  
-**Status:** ⏳ Planned  
-**Dependencies:** US-07 register flow
+**Assigned:** นักพัฒนา Backend + Frontend  
+**Status:** ✅ Done  
+**Dependencies:** US-06
 
 **Tasks:**
-| # | Task | Estimate |
-|---|------|----------|
-| T8.1 | เพิ่ม `PATCH /api/events/:eventId/check-in/:userId` endpoint | 2h |
-| T8.2 | ตรวจสิทธิ์ผู้เช็กชื่อ (owner event/ADMIN) | 1h |
-| T8.3 | ป้องกัน check-in ซ้ำและบันทึก `check_in_time` | 1.5h |
-| T8.4 | UI participant list พร้อมปุ่ม check-in | 2h |
-| T8.5 | เพิ่ม integration tests สำหรับ check-in rules | 2h |
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T7.1 | POST /api/events/:id/register endpoint | 2h |
+| T7.2 | ตรวจสอบ: event ต้อง APPROVED และ OPEN | 1h |
+| T7.3 | ป้องกัน double-registration (409) | 1h |
+| T7.4 | Transaction: ตรวจที่นั่ง + insert + update status | 2h |
+| T7.5 | อัปเดต event_status เป็น FULL ถ้าเต็ม | 1h |
+| T7.6 | จำกัดสิทธิ์เฉพาะ STUDENT role | 0.5h |
+| T7.7 | Frontend: ปุ่ม "สมัคร" พร้อม disabled state | 1.5h |
 
 ---
 
-### US-09 — ประวัติการเข้าร่วมกิจกรรม (Participation History)
+### US-08 — ยกเลิกการสมัคร (นิสิต)
 **As a** นิสิต  
-**I want to** ดูประวัติการเข้าร่วมกิจกรรมทั้งหมดของตัวเอง  
-**So that** ฉันติดตามกิจกรรมที่เข้าร่วมได้ครบถ้วน
+**I want to** ยกเลิกการสมัครกิจกรรมที่ฉันเคยสมัครไว้  
+**So that** ที่นั่งของฉันกลับมาให้คนอื่นสมัครได้
 
 **Story Points:** 5  
-**Assigned:** Backend + Frontend  
-**Status:** ⏳ Planned  
-**Dependencies:** US-08 check-in
+**Assigned:** นักพัฒนา Backend + Frontend  
+**Status:** ✅ Done  
+**Dependencies:** US-07
 
 **Tasks:**
-| # | Task | Estimate |
-|---|------|----------|
-| T9.1 | เพิ่ม endpoint ประวัติแบบครบทั้งหมด (รองรับ paging/filter) | 2h |
-| T9.2 | แยกสถานะ Registered/Attended/Cancelled ใน response | 1h |
-| T9.3 | UI หน้าประวัติการเข้าร่วมแบบเต็มรายการ | 2h |
-| T9.4 | เพิ่ม filter ตามช่วงเวลาและสถานะ | 1.5h |
-| T9.5 | เพิ่ม unit/integration tests | 1.5h |
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T8.1 | PATCH /api/events/:id/cancel-registration | 1.5h |
+| T8.2 | Transaction: update status + reopen event slot | 2h |
+| T8.3 | ตรวจว่า registration เป็นของ user ที่ขอยกเลิก | 1h |
+| T8.4 | Frontend: ปุ่ม "ยกเลิก" ใน event card | 1h |
+| T8.5 | จำกัดสิทธิ์เฉพาะ STUDENT role | 0.5h |
 
 ---
 
-### US-12 — ประเมินความพึงพอใจ (Feedback)
+### US-09 — ดูประวัติการสมัคร (นิสิต)
 **As a** นิสิต  
-**I want to** ให้คะแนนและแสดงความคิดเห็นหลังเข้าร่วมกิจกรรม  
-**So that** ผู้จัดกิจกรรมนำผลไปปรับปรุงงานครั้งถัดไป
+**I want to** ดูรายการกิจกรรมที่ตัวเองเคยสมัครทั้งหมด  
+**So that** ฉันสามารถติดตามสถานะการสมัครของตัวเองได้
 
-**Story Points:** 5  
-**Assigned:** Backend + Frontend  
-**Status:** ⏳ Planned  
-**Dependencies:** US-08 check-in, US-09 participation history
+**Story Points:** 3  
+**Assigned:** นักพัฒนา Backend + Frontend  
+**Status:** 🟡 Partial  
+**Dependencies:** US-07
 
 **Tasks:**
-| # | Task | Estimate |
-|---|------|----------|
-| T12.1 | ออกแบบตาราง `feedbacks` และ unique constraint (user_id,event_id) | 1.5h |
-| T12.2 | เพิ่ม `POST /api/events/:eventId/feedback` endpoint | 1.5h |
-| T12.3 | ตรวจเงื่อนไขส่งได้เฉพาะผู้ที่ attended และส่งได้ครั้งเดียว | 1.5h |
-| T12.4 | UI ฟอร์มให้คะแนน 1-5 + comment | 2h |
-| T12.5 | เพิ่ม tests สำหรับ one-submission rule | 1.5h |
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T9.1 | GET /api/events/registrations/me endpoint | 1.5h |
+| T9.2 | JOIN events table สำหรับข้อมูล event | 1h |
+| T9.3 | Frontend: แสดงรายการ "การสมัครของฉัน" | 1.5h |
 
 ---
 
-### US-13 — ค้นหาและกรองกิจกรรม (Search & Filter)
-**As a** ผู้ใช้  
-**I want to** ค้นหาและกรองรายการกิจกรรม  
-**So that** หา event ที่ตรงความสนใจได้รวดเร็ว
+### US-10 — Dashboard สำหรับอาจารย์
+**As an** อาจารย์  
+**I want to** เห็น Dashboard ที่รวมฟอร์มสร้างกิจกรรม + รายการรอ approve  
+**So that** ฉันสามารถจัดการกิจกรรมได้จากที่เดียว
 
 **Story Points:** 5  
-**Assigned:** Backend + Frontend  
-**Status:** ⏳ Planned  
-**Dependencies:** US-06 event listing
+**Assigned:** นักพัฒนา Frontend  
+**Status:** 🟡 Partial  
+**Dependencies:** US-04, US-05, US-06
 
 **Tasks:**
-| # | Task | Estimate |
-|---|------|----------|
-| T13.1 | เพิ่ม query params สำหรับ `GET /api/events` (q, date, location, status) | 2h |
-| T13.2 | ปรับ SQL ให้รองรับ search/filter อย่างปลอดภัย | 1.5h |
-| T13.3 | UI search bar + filter panel | 2h |
-| T13.4 | เพิ่ม debounce และ reset filter | 1h |
-| T13.5 | เพิ่ม tests ครอบคลุมเงื่อนไขค้นหา/กรอง | 1.5h |
+| # | Task | ประมาณการ |
+|---|------|-----------|
+| T10.1 | Role-gate สำหรับ section สร้างกิจกรรม | 1h |
+| T10.2 | ฟอร์มสร้างกิจกรรมใน Dashboard | 2h |
+| T10.3 | แสดง Approval Queue | 1.5h |
+| T10.4 | ปุ่ม Approve/Reject พร้อม remark input | 1h |
 
 ---
 
-## Sprint 2 Summary
+## Sprint Summary (Actual Verification)
 
-| US | Story | Points | Status |
-|----|-------|--------|--------|
-| US-04 | แก้ไขกิจกรรม | 5 | ⏳ Planned |
-| US-08 | เช็กชื่อเข้าร่วมกิจกรรม | 8 | ⏳ Planned |
-| US-09 | ประวัติการเข้าร่วมกิจกรรม | 5 | ⏳ Planned |
-| US-12 | ประเมินความพึงพอใจ | 5 | ⏳ Planned |
-| US-13 | ค้นหาและกรองกิจกรรม | 5 | ⏳ Planned |
-| **รวม** |  | **28 pts** |  |
+| US | Story | Points | Status | Reason (1 line) |
+|----|-------|--------|--------|------------------|
+| US-01 | ลงทะเบียนผู้ใช้ | 3 | ✅ Done | มี endpoint register, validation, hash password, กันอีเมลซ้ำ และคืน token ตาม flow |
+| US-02 | Login | 2 | ✅ Done | มี endpoint login ตรวจ credential และคืน JWT + user info |
+| US-03 | Login/Register UI | 3 | ✅ Done | มีหน้า Login/Register, AuthContext และ route protection ใช้งานได้ |
+| US-04 | สร้างกิจกรรม | 5 | 🟡 Partial | สร้างกิจกรรมได้จริง แต่สิทธิ์ผู้สร้างรวม STUDENT และบาง role auto-approve ไม่ตรงนิยามเดิมทั้งหมด |
+| US-05 | อนุมัติกิจกรรม | 5 | ✅ Done | มี pending queue และ approve/reject พร้อม remark และ role guard |
+| US-06 | ดูรายการกิจกรรม | 3 | ✅ Done | แสดง approved events พร้อม registeredCount/remainingSlots และแสดงบน Dashboard |
+| US-07 | สมัครกิจกรรม | 8 | ✅ Done | มี transaction กันแข่งที่นั่ง, กันสมัครซ้ำ, อัปเดต FULL และจำกัดสิทธิ์ STUDENT |
+| US-08 | ยกเลิกการสมัคร | 5 | ✅ Done | มี endpoint ยกเลิกแบบ transaction และคืนสถานะที่นั่งได้ |
+| US-09 | ดูประวัติการสมัคร | 3 | 🟡 Partial | มี endpoint และแสดงประวัติบนหน้า Dashboard แต่ปัจจุบันแสดงเฉพาะรายการล่าสุดบางส่วน |
+| US-10 | Dashboard อาจารย์ | 5 | 🟡 Partial | มี approval queue และ action ครบ แต่ฟอร์มสร้างกิจกรรมแยกเป็นหน้าใหม่ ไม่ได้อยู่หน้าเดียวกับ Dashboard |
+| **รวม** | | **42 pts** | **Done 29 pts / Partial 13 pts** | **Done 7 เรื่อง, Partial 3 เรื่อง, Not Started 0 เรื่อง** |
 
 ---
 
 ## Dependencies Map
 
-```text
-US-04 (Edit Event)
-US-08 (Check-in) ──► US-09 (Participation History) ──► US-12 (Feedback)
-US-13 (Search/Filter) พัฒนาได้คู่ขนานกับ US-04 และ US-08
+```
+US-01 ──► US-02 ──► US-03
+   └──────────────► US-04 ──► US-05 ──► US-06 ──► US-07 ──► US-08
+                                                         └──► US-09
+                              US-05
+                              US-04
+                              US-06 ──► US-10
 ```
 
-## Definition of Done (Sprint 2)
-
-- API ใหม่ผ่าน unit + integration tests
-- Frontend flow หลักทำงานจริงบน role ที่เกี่ยวข้อง
-- กฎธุรกิจสำคัญผ่านครบ: owner/admin permission, one feedback per attended event
-- เอกสาร API/Backlog อัปเดตตาม implementation จริง
-- CI ผ่าน (lint + tests)
