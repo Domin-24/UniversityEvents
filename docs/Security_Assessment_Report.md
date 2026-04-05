@@ -143,4 +143,4 @@ Packages flagged:
 Security assessment has been performed and documented. Baseline application security controls are present, but dependency vulnerabilities (including high severity) must be remediated before claiming production-ready security posture.
 
 สรุป
-มีการประเมินความปลอดภัยและบันทึกหลักฐานครบแล้ว ระบบมีพื้นฐานที่ดี แต่ยังต้องปิดช่องโหว่ dependency ระดับสูงก่อน จึงจะถือว่าพร้อมใช้งานจริงระดับ production.
+มีการประเมินความปลอดภัยและบันทึกหลักฐานครบแล้ว ระบบมีพื้นฐานที่ดี แต่ยังต้องปิดช่องโหว่ dependency ระดับสูงก่อน จึงจะถือว่าพร้อมใช้งาน
