@@ -33,7 +33,7 @@
 ## 6. Exit Criteria
 - All test suites pass
 - No blocking lint errors
-- Coverage report generated (`coverage/`)
+- Coverage report generated and copied to submission folder (`docs/coverage-reports/`)
 - Critical regression checks passed:
   - Unauthorized requests return 401
   - Forbidden role access returns 403
@@ -57,5 +57,7 @@ npm run lint
 ## 9. Deliverables
 - Test source files in `backend/tests/`
 - Jest config in `backend/jest.config.js`
-- Coverage artifacts in `coverage/`
-- D3 documentation set in `docs/`
+- Test cases spreadsheet in `docs/D3_Test_Cases.xlsx`
+- Coverage HTML report in `docs/coverage-reports/index.html`
+- Coverage source artifacts in `coverage/`
+- D3 documentation set in `docs/` (`D3_Test_Plan.md`, `D3_Test_Cases.md`, `D3_UAT_Scenarios.md`)

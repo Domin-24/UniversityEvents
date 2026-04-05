@@ -5,6 +5,8 @@ const { createEventSchema, eventIdParamSchema } = require('../validators/event.v
 async function createEvent(req, res, next) {
   try {
     const payload = createEventSchema.parse(req.body);
+    const isAutoApproved = ['LECTURER', 'ADMIN'].includes(req.user?.role);
+    const approvalStatus = isAutoApproved ? 'APPROVED' : 'PENDING';
     const eventDateForDb = new Date(payload.eventDate)
       .toISOString()
       .slice(0, 19)
@@ -13,7 +15,7 @@ async function createEvent(req, res, next) {
     const [result] = await pool.query(
       `INSERT INTO events
        (create_by, title, description, event_date, location, max_participants, approval_status, event_status)
-       VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 'OPEN')`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'OPEN')`,
       [
         req.user.userId,
         payload.title,
@@ -21,14 +23,18 @@ async function createEvent(req, res, next) {
         eventDateForDb,
         payload.location,
         payload.maxParticipants,
+        approvalStatus,
       ],
     );
 
     return res.status(201).json({
       success: true,
-      message: 'สร้างกิจกรรมสำเร็จ และอยู่ระหว่างรอการอนุมัติ',
+      message: isAutoApproved
+        ? 'สร้างกิจกรรมสำเร็จ และเผยแพร่ได้ทันที'
+        : 'สร้างกิจกรรมสำเร็จ และอยู่ระหว่างรอการอนุมัติ',
       data: {
         eventId: result.insertId,
+        approvalStatus,
       },
     });
   } catch (err) {
@@ -61,6 +67,7 @@ async function listApprovedEvents(req, res, next) {
           ON r.event_id = e.event_id
           AND r.status = 'REGISTERED'
        WHERE e.approval_status = 'APPROVED'
+         AND e.event_date > NOW()
          GROUP BY
           e.event_id,
           e.title,
@@ -116,6 +123,108 @@ async function listMyRegistrations(req, res, next) {
   }
 }
 
+async function listMyEvents(req, res, next) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+          e.event_id AS eventId,
+          e.title,
+          e.description,
+          e.event_date AS eventDate,
+          e.location,
+          e.max_participants AS maxParticipants,
+          e.event_status AS eventStatus,
+          e.approval_status AS approvalStatus,
+          COUNT(r.reg_id) AS registeredCount,
+          GREATEST(e.max_participants - COUNT(r.reg_id), 0) AS remainingSlots
+       FROM events e
+       LEFT JOIN registrations r
+         ON r.event_id = e.event_id
+         AND r.status = 'REGISTERED'
+       WHERE e.create_by = ?
+       GROUP BY
+         e.event_id,
+         e.title,
+         e.description,
+         e.event_date,
+         e.location,
+         e.max_participants,
+         e.event_status,
+         e.approval_status
+       ORDER BY e.created_at DESC`,
+      [req.user.userId],
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function listEventParticipants(req, res, next) {
+  try {
+    const { eventId } = eventIdParamSchema.parse(req.params);
+
+    const [events] = await pool.query(
+      `SELECT event_id AS eventId, create_by AS creatorId, title
+       FROM events
+       WHERE event_id = ?
+       LIMIT 1`,
+      [eventId],
+    );
+
+    if (events.length === 0) {
+      throw new ApiError(404, 'ไม่พบกิจกรรม');
+    }
+
+    const event = events[0];
+    const isOwner = event.creatorId === req.user.userId;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      throw new ApiError(403, 'คุณไม่มีสิทธิ์ดูผู้เข้าร่วมกิจกรรมนี้');
+    }
+
+    const [participants] = await pool.query(
+      `SELECT
+          r.reg_id AS registrationId,
+          r.user_id AS userId,
+          u.name,
+          u.email,
+          r.register_date AS registerDate,
+          r.status,
+          r.check_status AS checkStatus,
+          r.check_in_time AS checkInTime
+       FROM registrations r
+       JOIN users u ON u.user_id = r.user_id
+       WHERE r.event_id = ?
+         AND r.status = 'REGISTERED'
+       ORDER BY r.register_date ASC`,
+      [eventId],
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        event: {
+          eventId: event.eventId,
+          title: event.title,
+        },
+        participants,
+      },
+    });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      return next(new ApiError(400, 'ข้อมูลไม่ถูกต้อง', err.issues));
+    }
+
+    return next(err);
+  }
+}
+
 async function registerForEvent(req, res, next) {
   let connection;
 
@@ -125,7 +234,7 @@ async function registerForEvent(req, res, next) {
     await connection.beginTransaction();
 
     const [events] = await connection.query(
-      `SELECT event_id, title, max_participants, approval_status, event_status
+      `SELECT event_id, title, event_date, max_participants, approval_status, event_status
        FROM events
        WHERE event_id = ?
        LIMIT 1
@@ -145,6 +254,17 @@ async function registerForEvent(req, res, next) {
 
     if (['CLOSED', 'CANCELLED'].includes(event.event_status)) {
       throw new ApiError(409, 'กิจกรรมนี้ปิดรับลงทะเบียนแล้ว');
+    }
+
+    if (new Date(event.event_date) <= new Date()) {
+      await connection.query(
+        `UPDATE events
+         SET event_status = 'CLOSED'
+         WHERE event_id = ?`,
+        [eventId],
+      );
+
+      throw new ApiError(409, 'กิจกรรมนี้สิ้นสุดเวลาลงทะเบียนแล้ว');
     }
 
     const [registrations] = await connection.query(
@@ -297,6 +417,8 @@ module.exports = {
   createEvent,
   listApprovedEvents,
   listMyRegistrations,
+  listMyEvents,
+  listEventParticipants,
   registerForEvent,
   cancelRegistration,
 };

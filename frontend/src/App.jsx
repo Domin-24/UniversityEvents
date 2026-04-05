@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import CreateEventPage from './pages/CreateEventPage'
 import { useAuth } from './context/AuthContext'
 import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
@@ -19,6 +20,14 @@ function App() {
         element={(
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        )}
+      />
+      <Route
+        path="/events/new"
+        element={(
+          <ProtectedRoute>
+            <CreateEventPage />
           </ProtectedRoute>
         )}
       />

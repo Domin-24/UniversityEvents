@@ -12,15 +12,17 @@
 - [x] `backend/package.json` test scripts updated
 - [x] `docs/D3_Test_Plan.md`
 - [x] `docs/D3_Test_Cases.md`
+- [x] `docs/D3_Test_Cases.xlsx`
 - [x] `docs/D3_UAT_Scenarios.md`
 - [x] `docs/Performance_Test_Report.md`
+- [x] HTML coverage report copied to `docs/coverage-reports/`
 - [x] Coverage workflow configured in `.github/workflows/coverage.yml`
 
 ## Test Inventory
-- Unit test files: 6
+- Unit test files: 7
 - Integration test files: 5
-- Total test suites: 11
-- Total tests: 57
+- Total test suites: 12
+- Total tests: 60
 - Coverage (statements): 94.24%
 
 ## Open Items

@@ -1,31 +1,70 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+function parseEventDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = typeof value === 'string' && value.includes(' ') && !value.includes('T')
+    ? value.replace(' ', 'T')
+    : value;
+
+  const parsedDate = new Date(normalizedValue);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
 function DashboardPage() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const canManageEvents = ['LECTURER', 'ADMIN'].includes(user?.role);
+  const canCreateEvent = ['LECTURER', 'ADMIN', 'STUDENT'].includes(user?.role);
   const [events, setEvents] = useState([]);
+  const [myEvents, setMyEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [pendingEvents, setPendingEvents] = useState([]);
+  const [myEventsFilter, setMyEventsFilter] = useState('PENDING');
+  const [participantsByEvent, setParticipantsByEvent] = useState({});
+  const [activeParticipantsEventId, setActiveParticipantsEventId] = useState(null);
+  const [loadingParticipantsEventId, setLoadingParticipantsEventId] = useState(null);
   const [dashboardError, setDashboardError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeEventId, setActiveEventId] = useState(null);
   const [activeReviewId, setActiveReviewId] = useState(null);
-  const [createLoading, setCreateLoading] = useState(false);
   const [reviewRemarks, setReviewRemarks] = useState({});
-  const [eventForm, setEventForm] = useState({
-    title: '',
-    description: '',
-    eventDate: '',
-    location: '',
-    maxParticipants: 50,
-  });
 
   const activeRegistrationIds = useMemo(
     () => new Set(registrations.filter((item) => item.status === 'REGISTERED').map((item) => item.eventId)),
     [registrations],
+  );
+
+  const visibleEvents = useMemo(
+    () => {
+      const now = Date.now();
+      return events.filter((item) => {
+        const eventDate = parseEventDate(item.eventDate);
+        return eventDate && eventDate.getTime() > now;
+      });
+    },
+    [events],
+  );
+
+  const pendingMyEvents = useMemo(
+    () => myEvents.filter((item) => item.approvalStatus === 'PENDING'),
+    [myEvents],
+  );
+
+  const publishedMyEvents = useMemo(
+    () => myEvents.filter((item) => item.approvalStatus === 'APPROVED'),
+    [myEvents],
+  );
+
+  const filteredMyEvents = useMemo(
+    () => (myEventsFilter === 'PENDING' ? pendingMyEvents : publishedMyEvents),
+    [myEventsFilter, pendingMyEvents, publishedMyEvents],
   );
 
   const roleLabelMap = {
@@ -52,16 +91,18 @@ function DashboardPage() {
       const requests = [
         apiClient.get('/events'),
         apiClient.get('/events/registrations/me'),
+        apiClient.get('/events/mine'),
       ];
 
       if (canManageEvents) {
         requests.push(apiClient.get('/approvals/pending'));
       }
 
-      const [eventsResponse, registrationsResponse, approvalsResponse] = await Promise.all(requests);
+      const [eventsResponse, registrationsResponse, myEventsResponse, approvalsResponse] = await Promise.all(requests);
 
       setEvents(eventsResponse.data.data || []);
       setRegistrations(registrationsResponse.data.data || []);
+      setMyEvents(myEventsResponse.data.data || []);
       setPendingEvents(approvalsResponse?.data?.data || []);
     } catch (err) {
       setDashboardError(err.response?.data?.message || 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ');
@@ -74,43 +115,6 @@ function DashboardPage() {
     setLoading(true);
     void loadDashboardData();
   }, [loadDashboardData]);
-
-  const onEventFormChange = (event) => {
-    const { name, value } = event.target;
-    setEventForm((prev) => ({
-      ...prev,
-      [name]: name === 'maxParticipants' ? Number(value) : value,
-    }));
-  };
-
-  const onCreateEvent = async (event) => {
-    event.preventDefault();
-    setCreateLoading(true);
-    setDashboardError('');
-    setStatusMessage('');
-
-    try {
-      await apiClient.post('/events', {
-        ...eventForm,
-        eventDate: new Date(eventForm.eventDate).toISOString(),
-      });
-
-      setStatusMessage('สร้างกิจกรรมสำเร็จ และส่งเข้าสถานะรออนุมัติแล้ว');
-      setEventForm({
-        title: '',
-        description: '',
-        eventDate: '',
-        location: '',
-        maxParticipants: 50,
-      });
-      setLoading(true);
-      await loadDashboardData();
-    } catch (err) {
-      setDashboardError(err.response?.data?.message || 'สร้างกิจกรรมไม่สำเร็จ');
-    } finally {
-      setCreateLoading(false);
-    }
-  };
 
   const onRegister = async (eventId) => {
     setActiveEventId(eventId);
@@ -167,10 +171,45 @@ function DashboardPage() {
     }
   };
 
-  const formatDateTime = (value) => new Date(value).toLocaleString('th-TH', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const onToggleParticipants = async (eventId) => {
+    if (activeParticipantsEventId === eventId) {
+      setActiveParticipantsEventId(null);
+      return;
+    }
+
+    setDashboardError('');
+    setActiveParticipantsEventId(eventId);
+
+    if (participantsByEvent[eventId]) {
+      return;
+    }
+
+    setLoadingParticipantsEventId(eventId);
+
+    try {
+      const response = await apiClient.get(`/events/${eventId}/participants`);
+      setParticipantsByEvent((prev) => ({
+        ...prev,
+        [eventId]: response.data?.data?.participants || [],
+      }));
+    } catch (err) {
+      setDashboardError(err.response?.data?.message || 'โหลดรายชื่อผู้เข้าร่วมไม่สำเร็จ');
+    } finally {
+      setLoadingParticipantsEventId(null);
+    }
+  };
+
+  const formatDateTime = (value) => {
+    const parsedDate = parseEventDate(value);
+    if (!parsedDate) {
+      return '-';
+    }
+
+    return parsedDate.toLocaleString('th-TH', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  };
 
   const registrationHistory = registrations.slice(0, 5);
 
@@ -203,6 +242,15 @@ function DashboardPage() {
             <button type="button" className="secondary-button" onClick={() => void loadDashboardData()}>
               รีเฟรชข้อมูล
             </button>
+            {canCreateEvent ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => navigate('/events/new')}
+              >
+                สร้างกิจกรรมใหม่
+              </button>
+            ) : null}
             <button type="button" onClick={logout}>ออกจากระบบ</button>
           </div>
         </section>
@@ -216,16 +264,18 @@ function DashboardPage() {
               <p className="eyebrow">กิจกรรมที่อนุมัติแล้ว</p>
               <h2>กิจกรรมที่เปิดให้เข้าร่วม</h2>
             </div>
-            <span className="summary-chip">{events.length} รายการ</span>
+              <span className="summary-chip">{visibleEvents.length} รายการ</span>
           </div>
 
           {loading ? <p>กำลังโหลดข้อมูล...</p> : null}
 
-          {!loading && events.length === 0 ? <p>ยังไม่มีกิจกรรมที่ผ่านการอนุมัติ</p> : null}
+          {!loading && visibleEvents.length === 0 ? <p>ยังไม่มีกิจกรรมที่ผ่านการอนุมัติ</p> : null}
 
           <div className="event-grid">
-            {events.map((item) => {
+            {visibleEvents.map((item) => {
               const isRegistered = activeRegistrationIds.has(item.eventId);
+              const parsedEventDate = parseEventDate(item.eventDate);
+              const isRegistrationClosed = !parsedEventDate || parsedEventDate.getTime() <= Date.now();
               const isEventFull = item.eventStatus === 'FULL' || Number(item.remainingSlots) === 0;
 
               return (
@@ -272,12 +322,14 @@ function DashboardPage() {
                     ) : (
                       <button
                         type="button"
-                        disabled={activeEventId === item.eventId || isEventFull}
+                        disabled={activeEventId === item.eventId || isEventFull || isRegistrationClosed}
                         onClick={() => void onRegister(item.eventId)}
                       >
                         {activeEventId === item.eventId
                           ? 'กำลังลงทะเบียน...'
-                          : isEventFull
+                          : isRegistrationClosed
+                            ? 'หมดเวลาลงทะเบียน'
+                            : isEventFull
                             ? 'กิจกรรมเต็มแล้ว'
                             : 'ลงทะเบียนเข้าร่วม'}
                       </button>
@@ -289,86 +341,133 @@ function DashboardPage() {
           </div>
         </section>
 
-        <div className="dashboard-columns">
-          <section className="dashboard-card section-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">กิจกรรมของฉัน</p>
-                <h2>รายการลงทะเบียนของฉัน</h2>
-              </div>
-              <span className="summary-chip">{registrations.length} รายการ</span>
+        <section className="dashboard-card section-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">กิจกรรมที่ฉันสร้าง</p>
+              <h2>จัดการกิจกรรมของฉัน</h2>
             </div>
+            <span className="summary-chip">{myEvents.length} รายการ</span>
+          </div>
 
-            {registrationHistory.length === 0 ? <p>ยังไม่มีประวัติการลงทะเบียนกิจกรรม</p> : null}
+          <div className="event-card-actions split-actions">
+            <button
+              type="button"
+              className={myEventsFilter === 'PENDING' ? '' : 'secondary-button'}
+              onClick={() => setMyEventsFilter('PENDING')}
+            >
+              กิจกรรมฉัน (รออนุมัติ) {pendingMyEvents.length}
+            </button>
+            <button
+              type="button"
+              className={myEventsFilter === 'APPROVED' ? '' : 'secondary-button'}
+              onClick={() => setMyEventsFilter('APPROVED')}
+            >
+              กิจกรรมเผยแพร่แล้ว {publishedMyEvents.length}
+            </button>
+          </div>
 
-            <div className="stack-list">
-              {registrationHistory.map((item) => (
-                <div key={item.registrationId} className="stack-item">
-                  <div>
-                    <strong>{item.title}</strong>
-                    <p>{formatDateTime(item.eventDate)} • {item.location}</p>
+          {filteredMyEvents.length === 0 ? <p>ไม่พบกิจกรรมในหมวดที่เลือก</p> : null}
+
+          <div className="stack-list">
+            {filteredMyEvents.map((item) => {
+              const participants = participantsByEvent[item.eventId] || [];
+              const isParticipantsOpen = activeParticipantsEventId === item.eventId;
+              const isParticipantsLoading = loadingParticipantsEventId === item.eventId;
+
+              return (
+                <article key={item.eventId} className="approval-card">
+                  <div className="approval-card-top">
+                    <div>
+                      <h3>{item.title}</h3>
+                      <p>{item.description || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
+                    </div>
+                    <span className={`status-pill ${item.approvalStatus.toLowerCase()}`}>
+                      {statusLabelMap[item.approvalStatus] || item.approvalStatus}
+                    </span>
                   </div>
-                  <span className={`status-pill ${item.status.toLowerCase()}`}>
-                    {statusLabelMap[item.status] || item.status}
-                  </span>
-                </div>
-              ))}
+
+                  <div className="meta-grid">
+                    <div>
+                      <span>วันเวลา</span>
+                      <strong>{formatDateTime(item.eventDate)}</strong>
+                    </div>
+                    <div>
+                      <span>สถานที่</span>
+                      <strong>{item.location}</strong>
+                    </div>
+                    <div>
+                      <span>สถานะกิจกรรม</span>
+                      <strong>{statusLabelMap[item.eventStatus] || item.eventStatus}</strong>
+                    </div>
+                    <div>
+                      <span>ผู้เข้าร่วม</span>
+                      <strong>{item.registeredCount}/{item.maxParticipants}</strong>
+                    </div>
+                  </div>
+
+                  <div className="event-card-actions">
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={isParticipantsLoading}
+                      onClick={() => void onToggleParticipants(item.eventId)}
+                    >
+                      {isParticipantsLoading
+                        ? 'กำลังโหลดรายชื่อ...'
+                        : isParticipantsOpen
+                          ? 'ซ่อนรายชื่อผู้เข้าร่วม'
+                          : 'ดูรายชื่อผู้เข้าร่วม'}
+                    </button>
+                  </div>
+
+                  {isParticipantsOpen ? (
+                    <div className="stack-list">
+                      {participants.length === 0 ? <p>ยังไม่มีผู้เข้าร่วมกิจกรรมนี้</p> : null}
+                      {participants.map((participant) => (
+                        <div key={participant.registrationId} className="stack-item">
+                          <div>
+                            <strong>{participant.name}</strong>
+                            <p>{participant.email}</p>
+                          </div>
+                          <span className="status-pill registered">
+                            ลงทะเบียน {formatDateTime(participant.registerDate)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="dashboard-card section-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">กิจกรรมของฉัน</p>
+              <h2>รายการลงทะเบียนของฉัน</h2>
             </div>
-          </section>
+            <span className="summary-chip">{registrations.length} รายการ</span>
+          </div>
 
-          {canManageEvents ? (
-            <section className="dashboard-card section-card">
-              <div className="section-heading">
+          {registrationHistory.length === 0 ? <p>ยังไม่มีประวัติการลงทะเบียนกิจกรรม</p> : null}
+
+          <div className="stack-list">
+            {registrationHistory.map((item) => (
+              <div key={item.registrationId} className="stack-item">
                 <div>
-                  <p className="eyebrow">สร้างกิจกรรม</p>
-                  <h2>สร้างกิจกรรมใหม่</h2>
+                  <strong>{item.title}</strong>
+                  <p>{formatDateTime(item.eventDate)} • {item.location}</p>
                 </div>
+                <span className={`status-pill ${item.status.toLowerCase()}`}>
+                  {statusLabelMap[item.status] || item.status}
+                </span>
               </div>
-
-              <form className="auth-form" onSubmit={onCreateEvent}>
-                <label htmlFor="title">ชื่อกิจกรรม</label>
-                <input id="title" name="title" value={eventForm.title} onChange={onEventFormChange} required />
-
-                <label htmlFor="description">รายละเอียด</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={eventForm.description}
-                  onChange={onEventFormChange}
-                  rows={4}
-                />
-
-                <label htmlFor="eventDate">วันเวลา</label>
-                <input
-                  id="eventDate"
-                  type="datetime-local"
-                  name="eventDate"
-                  value={eventForm.eventDate}
-                  onChange={onEventFormChange}
-                  required
-                />
-
-                <label htmlFor="location">สถานที่</label>
-                <input id="location" name="location" value={eventForm.location} onChange={onEventFormChange} required />
-
-                <label htmlFor="maxParticipants">จำนวนผู้เข้าร่วมสูงสุด</label>
-                <input
-                  id="maxParticipants"
-                  type="number"
-                  min={1}
-                  name="maxParticipants"
-                  value={eventForm.maxParticipants}
-                  onChange={onEventFormChange}
-                  required
-                />
-
-                <button type="submit" disabled={createLoading}>
-                  {createLoading ? 'กำลังสร้างกิจกรรม...' : 'สร้างกิจกรรม'}
-                </button>
-              </form>
-            </section>
-          ) : null}
-        </div>
+            ))}
+          </div>
+        </section>
 
         {canManageEvents ? (
           <section className="dashboard-card section-card">

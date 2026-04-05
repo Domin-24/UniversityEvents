@@ -5,9 +5,14 @@ const { requireRole } = require('../../src/middlewares/role');
 
 describe('utils/jwt', () => {
   test('should sign token that can be verified', () => {
-    const token = signAccessToken({ userId: 1, role: 'STUDENT' });
+    // Arrange
+    const claims = { userId: 1, role: 'STUDENT' };
+
+    // Act
+    const token = signAccessToken(claims);
     const payload = jwt.verify(token, env.jwtSecret);
 
+    // Assert
     expect(payload.userId).toBe(1);
     expect(payload.role).toBe('STUDENT');
   });
@@ -15,32 +20,45 @@ describe('utils/jwt', () => {
 
 describe('middlewares/role', () => {
   test('should allow user with allowed role', () => {
+    // Arrange
     const req = { user: { role: 'ADMIN' } };
     const res = {};
     const next = jest.fn();
+    const middleware = requireRole(['ADMIN']);
 
-    requireRole(['ADMIN'])(req, res, next);
+    // Act
+    middleware(req, res, next);
+
+    // Assert
     expect(next).toHaveBeenCalledWith();
   });
 
   test('should block request when user is missing', () => {
+    // Arrange
     const req = {};
     const res = {};
     const next = jest.fn();
+    const middleware = requireRole(['ADMIN']);
 
-    requireRole(['ADMIN'])(req, res, next);
+    // Act
+    middleware(req, res, next);
 
+    // Assert
     expect(next).toHaveBeenCalledTimes(1);
     expect(next.mock.calls[0][0].statusCode).toBe(403);
   });
 
   test('should block request when role is not allowed', () => {
+    // Arrange
     const req = { user: { role: 'STUDENT' } };
     const res = {};
     const next = jest.fn();
+    const middleware = requireRole(['LECTURER', 'ADMIN']);
 
-    requireRole(['LECTURER', 'ADMIN'])(req, res, next);
+    // Act
+    middleware(req, res, next);
 
+    // Assert
     expect(next).toHaveBeenCalledTimes(1);
     expect(next.mock.calls[0][0].statusCode).toBe(403);
   });

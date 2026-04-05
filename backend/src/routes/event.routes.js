@@ -6,11 +6,13 @@ const { requireRole } = require('../middlewares/role');
 const router = express.Router();
 
 router.get('/', eventController.listApprovedEvents);
+router.get('/mine', requireAuth, eventController.listMyEvents);
 router.get('/registrations/me', requireAuth, eventController.listMyRegistrations);
+router.get('/:eventId/participants', requireAuth, eventController.listEventParticipants);
 router.post(
   '/',
   requireAuth,
-  requireRole(['LECTURER', 'ADMIN']),
+  requireRole(['LECTURER', 'ADMIN', 'STUDENT']),
   eventController.createEvent,
 );
 router.post('/:eventId/register', requireAuth, requireRole(['STUDENT']), eventController.registerForEvent);
