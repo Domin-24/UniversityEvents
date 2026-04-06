@@ -193,12 +193,7 @@
 3. ทำ load test อย่างเป็นทางการและแนบผล p95/p99
 4. เพิ่ม security logging และกำหนด alerting ขั้นพื้นฐาน
 
-### 7.3 งานต่อเนื่องใน D5
 
-1. เพิ่ม branch coverage ใน controller และ middleware ที่ยังต่ำ
-2. เพิ่ม test สำหรับ failure path และ edge cases
-3. ตั้ง CI gate ด้าน security (fail เมื่อมี high/critical)
-4. เพิ่ม performance regression test เข้า pipeline
 
 ## ภาคผนวก: หลักฐานที่ใช้อ้างอิง
 
