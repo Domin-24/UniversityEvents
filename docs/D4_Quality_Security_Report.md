@@ -208,4 +208,3 @@
 - `docs/Security_Assessment_Report.md`
 - `docs/Performance_Test_Report.md`
 - `docs/Risk_Register.md`
-- `docs/Code_Review_Training_Report.md`
