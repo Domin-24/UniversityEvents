@@ -1,55 +1,126 @@
 # D3 UAT Scenarios
 
-## UAT-01 Student registration journey
-- Actor: STUDENT
-- Preconditions:
-  - Student account exists.
-  - At least one APPROVED and OPEN event exists.
-- Steps:
-  1. Login as student.
-  2. Open dashboard event list.
-  3. Click register on an open event.
-  4. Open "My registrations" section.
-- Expected:
-  - Registration success message appears.
-  - Event appears in student registration history.
+## Scenario 1: นิสิตสมัครสมาชิกและเข้าสู่ระบบ
 
-## UAT-02 Lecturer approval workflow
-- Actor: LECTURER
-- Preconditions:
-  - At least one event in PENDING status.
-- Steps:
-  1. Login as lecturer.
-  2. Open approval queue.
-  3. Approve event with remark.
-- Expected:
-  - Event status changes from PENDING to APPROVED.
-  - Event appears in public event list.
+**Objective:** นิสิตสามารถสมัครบัญชีและเข้าสู่ระบบเพื่อใช้งานระบบกิจกรรมได้สำเร็จ
 
-## UAT-03 Role-based access control
-- Actor: STUDENT / LECTURER
-- Preconditions: Valid tokens for both roles.
-- Steps:
-  1. Attempt to create event with student token.
-  2. Attempt to register event with lecturer token.
-- Expected:
-  - Both actions are blocked with Forbidden message.
+### Steps
+1. เปิดเบราว์เซอร์ไปที่ localhost:5173
+2. ไปที่หน้าสมัครสมาชิก กรอกชื่อ อีเมล และรหัสผ่าน
+3. กดปุ่มสมัครสมาชิก
+4. เข้าสู่ระบบด้วยบัญชีที่สมัครใหม่
+5. ตรวจสอบว่าระบบพาไปหน้า Dashboard หลังเข้าสู่ระบบสำเร็จ
 
-## UAT-04 Cancel registration
-- Actor: STUDENT
-- Preconditions:
-  - Student is already REGISTERED for an event.
-- Steps:
-  1. Open registration history.
-  2. Click cancel registration.
-- Expected:
-  - Status changes to CANCELLED.
-  - Event slot becomes available again when applicable.
+### Expected Outcome
+- ✓ สมัครสมาชิกสำเร็จและไม่เกิดข้อมูลซ้ำ
+- ✓ เข้าสู่ระบบสำเร็จและได้รับสถานะผู้ใช้แบบนิสิต
+- ✓ ระบบ Redirect ไปหน้า Dashboard อัตโนมัติ
 
-## UAT-05 Authentication guard
-- Actor: Anonymous user
-- Preconditions: None
-- Steps:
-  1. Access protected endpoints without token.
-- Expected:
-  - Server returns Unauthorized (401).
+**วันที่ทดสอบ:** 5/4/2569  
+**ผู้ทดสอบ:** Product Owner  
+**ผลการทดสอบ:** Pass
+
+---
+
+## Scenario 2: อาจารย์สร้างกิจกรรมใหม่
+
+**Objective:** ผู้ใช้บทบาทอาจารย์สามารถสร้างกิจกรรมใหม่ได้ และกิจกรรมเข้าสถานะรออนุมัติ
+
+### Steps
+1. เข้าสู่ระบบด้วยบัญชีอาจารย์
+2. ไปที่เมนูสร้างกิจกรรม
+3. กรอกข้อมูลกิจกรรมให้ครบ เช่น ชื่อกิจกรรม รายละเอียด วันที่จัด จำนวนรับสมัคร
+4. กดบันทึกกิจกรรม
+5. ตรวจสอบสถานะกิจกรรมที่สร้างใหม่
+
+### Expected Outcome
+- ✓ สร้างกิจกรรมสำเร็จ
+- ✓ กิจกรรมใหม่ถูกบันทึกด้วยสถานะ PENDING
+- ✓ รายการกิจกรรมที่รออนุมัติแสดงข้อมูลถูกต้อง
+
+**วันที่ทดสอบ:** 5/4/2569  
+**ผู้ทดสอบ:** Product Owner  
+**ผลการทดสอบ:** Pass
+
+---
+
+## Scenario 3: อนุมัติกิจกรรมและเผยแพร่รายการกิจกรรม
+
+**Objective:** ผู้มีสิทธิ์อนุมัติสามารถอนุมัติกิจกรรม และกิจกรรมปรากฏในหน้ารายการสาธารณะ
+
+### Steps
+1. เข้าสู่ระบบด้วยบัญชีอาจารย์หรือผู้ดูแลที่มีสิทธิ์อนุมัติ
+2. ไปที่เมนูรายการรออนุมัติ
+3. เปิดกิจกรรมที่มีสถานะ PENDING
+4. เลือกอนุมัติและบันทึกหมายเหตุ
+5. ออกจากระบบผู้อนุมัติ แล้วเปิดหน้ารายการกิจกรรมสาธารณะ
+
+### Expected Outcome
+- ✓ กิจกรรมเปลี่ยนสถานะจาก PENDING เป็น APPROVED
+- ✓ ประวัติการอนุมัติถูกบันทึก
+- ✓ กิจกรรมที่อนุมัติแล้วแสดงในหน้ารายการกิจกรรมสาธารณะ
+
+**วันที่ทดสอบ:** 5/4/2569  
+**ผู้ทดสอบ:** Product Owner  
+**ผลการทดสอบ:** Pass
+
+---
+
+## Scenario 4: นิสิตลงทะเบียนกิจกรรมและยกเลิกการลงทะเบียน
+
+**Objective:** นิสิตสามารถลงทะเบียนกิจกรรมที่เปิดอยู่ และยกเลิกการลงทะเบียนได้จากประวัติของตนเอง
+
+### Steps
+1. เข้าสู่ระบบด้วยบัญชีนิสิต
+2. เปิดหน้ารายการกิจกรรมที่อนุมัติแล้ว
+3. เลือกกิจกรรมที่เปิดรับสมัครและกดลงทะเบียน
+4. ไปที่เมนูประวัติการลงทะเบียนของฉัน
+5. ตรวจสอบว่ามีกิจกรรมที่ลงทะเบียนไว้
+6. กดยกเลิกการลงทะเบียนในกิจกรรมเดียวกัน
+7. รีเฟรชหน้าเพื่อตรวจสอบสถานะล่าสุด
+
+### Expected Outcome
+- ✓ ลงทะเบียนกิจกรรมสำเร็จ
+- ✓ รายการกิจกรรมแสดงในประวัติของนิสิต
+- ✓ หลังยกเลิก สถานะเปลี่ยนเป็น CANCELLED
+- ✓ จำนวนที่นั่งว่างของกิจกรรมถูกอัปเดตตามการยกเลิก
+
+**วันที่ทดสอบ:** 5/4/2569  
+**ผู้ทดสอบ:** QA Lead  
+**ผลการทดสอบ:** Pass
+
+---
+
+## Scenario 5: ตรวจสอบการควบคุมสิทธิ์ตามบทบาท
+
+**Objective:** ระบบบังคับสิทธิ์ตามบทบาทอย่างถูกต้องในงานสำคัญ
+
+### Steps
+1. เข้าสู่ระบบด้วยบัญชีนิสิต
+2. พยายามเรียกใช้งานฟังก์ชันสร้างกิจกรรม
+3. เข้าสู่ระบบด้วยบัญชีอาจารย์
+4. พยายามลงทะเบียนเข้าร่วมกิจกรรมในฐานะผู้เข้าร่วม
+5. ทดสอบเรียก endpoint ที่ต้องล็อกอินโดยไม่ส่ง token
+
+### Expected Outcome
+- ✓ นิสิตไม่สามารถสร้างกิจกรรมได้ (403 Forbidden)
+- ✓ อาจารย์ไม่สามารถลงทะเบียนกิจกรรมในเส้นทางของนิสิตได้ (403 Forbidden)
+- ✓ การเรียกใช้งานโดยไม่ส่ง token ถูกปฏิเสธ (401 Unauthorized)
+
+**วันที่ทดสอบ:** 5/4/2569  
+**ผู้ทดสอบ:** QA Lead  
+**ผลการทดสอบ:** Pass
+
+---
+
+## UAT Summary
+
+| No | Scenario | Result | Issues | Approval |
+|---:|---|---|---:|---|
+| 1 | นิสิตสมัครสมาชิกและเข้าสู่ระบบ | Pass | 0 | ✓ |
+| 2 | อาจารย์สร้างกิจกรรมใหม่ | Pass | 0 | ✓ |
+| 3 | อนุมัติกิจกรรมและเผยแพร่รายการกิจกรรม | Pass | 0 | ✓ |
+| 4 | นิสิตลงทะเบียนกิจกรรมและยกเลิกการลงทะเบียน | Pass | 0 | ✓ |
+| 5 | ตรวจสอบการควบคุมสิทธิ์ตามบทบาท | Pass | 0 | ✓ |
+
+**สถานะโดยรวม:** ผ่านทุกสถานการณ์
